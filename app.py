@@ -481,15 +481,17 @@ def render_message(message: Dict, model_name: str = ""):
         text_content = content
     
     if role == "user":
+        formatted_content = text_content.replace('\n', '<br>')
         st.markdown(f"""
         <div class="message-container user-message">
             <div class="message-avatar user-avatar">👤</div>
             <div class="message-bubble user-bubble">
-                {text_content.replace('\n', '<br>')}
+                {formatted_content}
             </div>
         </div>
         """, unsafe_allow_html=True)
     else:
+        formatted_content = text_content.replace('\n', '<br>')
         st.markdown(f"""
         <div class="message-container">
             <div class="message-avatar assistant-avatar">🤖</div>
@@ -497,7 +499,7 @@ def render_message(message: Dict, model_name: str = ""):
                 <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.5rem;">
                     {model_name}
                 </div>
-                {text_content.replace('\n', '<br>')}
+                {formatted_content}
             </div>
         </div>
         """, unsafe_allow_html=True)
