@@ -1,0 +1,55 @@
+<div class="message-card">
+  <div class="message-header">
+    <div>
+      <h5 class="mb-1">{{ msg.subject }}</h5>
+      <small class="text-muted">
+        👤 {{ msg.user_email }} • 
+        🕐 {{ msg.created_at[:19] if msg.created_at else '' }}
+      </small>
+    </div>
+    <div>
+      {% if msg.status == 'pending' %}
+        <span class="badge bg-warning">⏳ Chờ xử lý</span>
+      {% elif msg.status == 'replied' %}
+        <span class="badge bg-success">✅ Đã trả lời</span>
+      {% else %}
+        <span class="badge bg-secondary">{{ msg.status }}</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="message-body">
+    <strong>💬 Nội dung:</strong>
+    <p class="mt-2">{{ msg.message }}</p>
+  </div>
+
+  {% if msg.status == 'replied' and msg.admin_reply %}
+    <div class="admin-reply-box">
+      <strong>✅ Phản hồi của bạn:</strong>
+      <p class="mt-2 mb-0">{{ msg.admin_reply }}</p>
+      {% if msg.replied_at %}
+        <small class="text-muted">Trả lời lúc: {{ msg.replied_at[:19] }}</small>
+      {% endif %}
+    </div>
+  {% else %}
+    <div class="mt-3">
+      <button class="btn btn-primary" onclick="toggleReplyForm({{ msg.id }})">
+        💬 Trả lời
+      </button>
+    </div>
+
+    <div class="reply-form" id="reply-form-{{ msg.id }}" style="display: none;">
+      <label class="form-label fw-bold">📝 Phản hồi cho user:</label>
+      <textarea class="form-control mb-2" id="reply-text-{{ msg.id }}" rows="4" 
+                placeholder="Nhập nội dung trả lời..."></textarea>
+      <div class="d-flex gap-2">
+        <button class="btn btn-success" onclick="submitReply({{ msg.id }})">
+          📤 Gửi phản hồi
+        </button>
+        <button class="btn btn-outline-secondary" onclick="toggleReplyForm({{ msg.id }})">
+          Hủy
+        </button>
+      </div>
+    </div>
+  {% endif %}
+</div>

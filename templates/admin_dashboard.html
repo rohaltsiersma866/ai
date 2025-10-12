@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <title>Admin Dashboard - Google Index Checker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <style>
+    body{padding:24px; background:#f8f9fa;}
+    .navbar {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      box-shadow: 0 2px 10px rgba(0,0,0,.1);
+      padding: 15px 0;
+      margin-bottom: 30px;
+      color: white;
+    }
+    .navbar-brand, .navbar a {
+      color: white !important;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .stat-card {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.1);
+    }
+    .stat-number {
+      font-size: 2.5em;
+      font-weight: 700;
+      color: #667eea;
+    }
+    .quick-links {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.1);
+    }
+    .quick-link-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 15px;
+      border-radius: 8px;
+      background: #f8f9fa;
+      text-decoration: none;
+      color: #333;
+      margin-bottom: 10px;
+      transition: all 0.3s;
+    }
+    .quick-link-btn:hover {
+      background: #667eea;
+      color: white;
+      transform: translateX(5px);
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="/admin">👑 Admin Dashboard</a>
+      <div class="d-flex gap-3">
+        <a href="/" class="btn btn-sm btn-light">🏠 User View</a>
+        <a href="/logout" class="btn btn-sm btn-outline-light">Đăng xuất</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h2 class="mb-4">📊 Tổng quan hệ thống</h2>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-muted mb-2">👥 Tổng Users</h6>
+            <div class="stat-number">{{ users|length }}</div>
+          </div>
+          <div style="font-size: 3em; opacity: 0.2;">👥</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-muted mb-2">📨 Tin nhắn chờ</h6>
+            <div class="stat-number">{{ pending_messages }}</div>
+          </div>
+          <div style="font-size: 3em; opacity: 0.2;">📨</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-muted mb-2">💰 Tổng Credits đã cấp</h6>
+            <div class="stat-number">
+              {% set total_credits = users | map(attribute='credits') | sum %}
+              {{ total_credits }}
+            </div>
+          </div>
+          <div style="font-size: 3em; opacity: 0.2;">💰</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-muted mb-2">🔑 API Keys</h6>
+            <div class="stat-number" id="apiKeyCount">-</div>
+          </div>
+          <div style="font-size: 3em; opacity: 0.2;">🔑</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <div class="quick-links">
+          <h5 class="mb-3">⚡ Quản lý nhanh</h5>
+
+          <a href="/admin/users" class="quick-link-btn">
+            <span style="font-size: 1.5em;">👥</span>
+            <div>
+              <strong>Quản lý Users</strong>
+              <div><small class="text-muted">Xem, điều chỉnh credits users</small></div>
+            </div>
+          </a>
+
+          <a href="/admin/api-keys" class="quick-link-btn">
+            <span style="font-size: 1.5em;">🔑</span>
+            <div>
+              <strong>Quản lý API Keys</strong>
+              <div><small class="text-muted">Thêm, xóa API keys Serper</small></div>
+            </div>
+          </a>
+
+          <a href="/admin/messages" class="quick-link-btn">
+            <span style="font-size: 1.5em;">📨</span>
+            <div>
+              <strong>Tin nhắn từ Users</strong>
+              <div><small class="text-muted">{{ pending_messages }} tin nhắn chờ xử lý</small></div>
+            </div>
+          </a>
+
+          <a href="/" class="quick-link-btn">
+            <span style="font-size: 1.5em;">🔍</span>
+            <div>
+              <strong>Kiểm tra Index</strong>
+              <div><small class="text-muted">Sử dụng tool như user</small></div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="quick-links">
+          <h5 class="mb-3">📊 API Status</h5>
+          <div id="apiStatusContainer">
+            <div class="text-center py-4">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-outline-primary w-100 mt-3" onclick="refreshApiStatus()">
+            🔄 Refresh API Status
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4 quick-links">
+      <h5 class="mb-3">📋 Users gần đây</h5>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead class="table-light">
+            <tr>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Credits</th>
+              <th>Đăng ký</th>
+              <th>Login cuối</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for user_item in users[:10] %}
+              <tr>
+                <td>{{ user_item.email }}</td>
+                <td>
+                  {% if user_item.role == 'admin' %}
+                    <span class="badge bg-danger">👑 Admin</span>
+                  {% else %}
+                    <span class="badge bg-primary">👤 User</span>
+                  {% endif %}
+                </td>
+                <td><strong>{{ user_item.credits }}</strong></td>
+                <td><small>{{ user_item.created_at[:10] if user_item.created_at else '-' }}</small></td>
+                <td><small>{{ user_item.last_login[:16] if user_item.last_login else 'Chưa login' }}</small></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="text-center">
+        <a href="/admin/users" class="btn btn-primary">Xem tất cả users →</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    async function loadApiStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+
+        if (data.is_admin) {
+          document.getElementById('apiKeyCount').textContent = data.apis.length;
+
+          let statusHtml = `
+            <div class="mb-3">
+              <strong>📊 Tổng quota:</strong> <span class="text-primary fs-4">${data.total_remaining}</span> credits
+            </div>
+            <div class="mb-3">
+              <strong>✅ Keys hoạt động:</strong> ${data.active_keys}/${data.apis.length}
+            </div>
+            <hr>
+            <div class="small">
+          `;
+
+          data.apis.forEach(api => {
+            let statusBadge = 'secondary';
+            if (api.status === 'active') statusBadge = 'success';
+            else if (api.status === 'low_credits') statusBadge = 'warning';
+            else if (api.status === 'exhausted') statusBadge = 'danger';
+
+            statusHtml += `
+              <div class="d-flex justify-content-between mb-2 p-2 ${api.is_current ? 'bg-light rounded' : ''}">
+                <span>
+                  <strong>Key #${api.index}:</strong> ${api.name}
+                  ${api.is_current ? '<span class="badge bg-info ms-1">Current</span>' : ''}
+                </span>
+                <span class="badge bg-${statusBadge}">${api.remaining} credits</span>
+              </div>
+            `;
+          });
+
+          statusHtml += '</div>';
+          document.getElementById('apiStatusContainer').innerHTML = statusHtml;
+        }
+      } catch (error) {
+        console.error('Error loading API status:', error);
+        document.getElementById('apiStatusContainer').innerHTML = 
+          '<div class="alert alert-danger">❌ Lỗi tải dữ liệu</div>';
+      }
+    }
+
+    async function refreshApiStatus() {
+      try {
+        const res = await fetch('/api/refresh-credits', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (res.ok) {
+          await loadApiStatus();
+          alert('✅ Đã cập nhật API credits!');
+        } else {
+          alert('❌ Lỗi cập nhật!');
+        }
+      } catch (error) {
+        alert('❌ Lỗi: ' + error.message);
+      }
+    }
+
+    // Load API status on page load
+    loadApiStatus();
+
+    // Auto refresh every 30 seconds
+    setInterval(loadApiStatus, 30000);
+  </script>
+</body>
+</html>

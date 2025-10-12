@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <title>Tin nhắn của tôi - Google Index Checker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <style>
+    body{padding:24px; background:#f8f9fa;}
+    .navbar {
+      background: white;
+      box-shadow: 0 2px 10px rgba(0,0,0,.1);
+      padding: 15px 0;
+      margin-bottom: 30px;
+    }
+    .message-card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.08);
+      padding: 25px;
+      margin-bottom: 20px;
+      transition: transform 0.2s;
+    }
+    .message-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0,0,0,.12);
+    }
+    .message-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+    .message-meta {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .message-body {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+    .admin-reply-box {
+      background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+      border-left: 4px solid #10b981;
+      padding: 20px;
+      border-radius: 12px;
+      margin-top: 15px;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #6b7280;
+    }
+    .empty-state-icon {
+      font-size: 4em;
+      margin-bottom: 20px;
+      opacity: 0.3;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="/">🔍 Index Checker</a>
+      <div class="d-flex gap-3">
+        <a href="/" class="btn btn-sm btn-outline-primary">🏠 Dashboard</a>
+        <a href="/contact" class="btn btn-sm btn-outline-success">📧 Liên hệ mới</a>
+        <a href="/my-credits" class="btn btn-sm btn-outline-info">💳 Credits</a>
+        <a href="/logout" class="btn btn-sm btn-outline-danger">Đăng xuất</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h2>📨 Tin nhắn của tôi</h2>
+        <p class="text-muted mb-0">Theo dõi các yêu cầu và phản hồi từ admin</p>
+      </div>
+      <div>
+        <a href="/contact" class="btn btn-primary">
+          ✉️ Gửi tin nhắn mới
+        </a>
+      </div>
+    </div>
+
+    <!-- Filter tabs -->
+    <ul class="nav nav-tabs mb-4">
+      <li class="nav-item">
+        <a class="nav-link active" data-bs-toggle="tab" href="#all">
+          📋 Tất cả ({{ messages|length }})
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#pending">
+          ⏳ Chờ xử lý ({{ messages|selectattr('status', 'equalto', 'pending')|list|length }})
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#replied">
+          ✅ Đã trả lời ({{ messages|selectattr('status', 'equalto', 'replied')|list|length }})
+        </a>
+      </li>
+    </ul>
+
+    <div class="tab-content">
+      <!-- All Messages -->
+      <div class="tab-pane fade show active" id="all">
+        {% if messages %}
+          {% for msg in messages %}
+            <div class="message-card">
+              <div class="message-header">
+                <div class="flex-grow-1">
+                  <h5 class="mb-2">{{ msg.subject }}</h5>
+                  <div class="message-meta">
+                    <small class="text-muted">
+                      🕐 {{ msg.created_at[:16] if msg.created_at else '' }}
+                    </small>
+                    <small>
+                      {% if msg.status == 'pending' %}
+                        <span class="status-badge badge bg-warning">⏳ Chờ xử lý</span>
+                      {% elif msg.status == 'replied' %}
+                        <span class="status-badge badge bg-success">✅ Đã trả lời</span>
+                      {% else %}
+                        <span class="badge bg-secondary">{{ msg.status }}</span>
+                      {% endif %}
+                    </small>
+                  </div>
+                </div>
+              </div>
+
+              <div class="message-body">
+                <strong>💬 Nội dung của bạn:</strong>
+                <p class="mt-2 mb-0">{{ msg.message }}</p>
+              </div>
+
+              {% if msg.status == 'replied' and msg.admin_reply %}
+                <div class="admin-reply-box">
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <strong>👨‍💼 Phản hồi từ Admin:</strong>
+                    {% if msg.replied_at %}
+                      <small class="text-muted">({{ msg.replied_at[:16] }})</small>
+                    {% endif %}
+                  </div>
+                  <p class="mb-0">{{ msg.admin_reply }}</p>
+                </div>
+              {% else %}
+                <div class="alert alert-info mb-0">
+                  <small>⏳ Admin sẽ phản hồi trong vòng 24 giờ</small>
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <h4>Chưa có tin nhắn nào</h4>
+            <p class="text-muted mb-4">Bạn chưa gửi tin nhắn nào cho admin</p>
+            <a href="/contact" class="btn btn-primary btn-lg">
+              ✉️ Gửi tin nhắn đầu tiên
+            </a>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Pending Messages -->
+      <div class="tab-pane fade" id="pending">
+        {% set pending_messages = messages|selectattr('status', 'equalto', 'pending')|list %}
+        {% if pending_messages %}
+          {% for msg in pending_messages %}
+            <div class="message-card">
+              <div class="message-header">
+                <div class="flex-grow-1">
+                  <h5 class="mb-2">{{ msg.subject }}</h5>
+                  <div class="message-meta">
+                    <small class="text-muted">
+                      🕐 {{ msg.created_at[:16] if msg.created_at else '' }}
+                    </small>
+                    <small>
+                      <span class="status-badge badge bg-warning">⏳ Chờ xử lý</span>
+                    </small>
+                  </div>
+                </div>
+              </div>
+
+              <div class="message-body">
+                <strong>💬 Nội dung:</strong>
+                <p class="mt-2 mb-0">{{ msg.message }}</p>
+              </div>
+
+              <div class="alert alert-info mb-0">
+                <small>⏳ Admin sẽ phản hồi trong vòng 24 giờ</small>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state">
+            <div class="empty-state-icon">✅</div>
+            <h4>Không có tin nhắn chờ xử lý</h4>
+            <p class="text-muted">Tất cả tin nhắn đã được admin trả lời</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Replied Messages -->
+      <div class="tab-pane fade" id="replied">
+        {% set replied_messages = messages|selectattr('status', 'equalto', 'replied')|list %}
+        {% if replied_messages %}
+          {% for msg in replied_messages %}
+            <div class="message-card">
+              <div class="message-header">
+                <div class="flex-grow-1">
+                  <h5 class="mb-2">{{ msg.subject }}</h5>
+                  <div class="message-meta">
+                    <small class="text-muted">
+                      🕐 {{ msg.created_at[:16] if msg.created_at else '' }}
+                    </small>
+                    <small>
+                      <span class="status-badge badge bg-success">✅ Đã trả lời</span>
+                    </small>
+                  </div>
+                </div>
+              </div>
+
+              <div class="message-body">
+                <strong>💬 Nội dung của bạn:</strong>
+                <p class="mt-2 mb-0">{{ msg.message }}</p>
+              </div>
+
+              <div class="admin-reply-box">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <strong>👨‍💼 Phản hồi từ Admin:</strong>
+                  {% if msg.replied_at %}
+                    <small class="text-muted">({{ msg.replied_at[:16] }})</small>
+                  {% endif %}
+                </div>
+                <p class="mb-0">{{ msg.admin_reply }}</p>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <h4>Chưa có tin nhắn nào được trả lời</h4>
+            <p class="text-muted">Các tin nhắn của bạn chưa được admin phản hồi</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Help Section -->
+    <div class="message-card mt-4" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);">
+      <h6 class="fw-bold mb-3">💡 Mẹo sử dụng:</h6>
+      <ul class="small mb-0">
+        <li><strong>Mua credits:</strong> Chọn chủ đề "💰 Mua thêm Credits" và nêu rõ số lượng cần mua</li>
+        <li><strong>Hỗ trợ kỹ thuật:</strong> Mô tả chi tiết vấn đề và screenshot nếu có</li>
+        <li><strong>Thời gian phản hồi:</strong> Admin thường trả lời trong vòng 24 giờ</li>
+        <li><strong>Check tin nhắn:</strong> Trang này tự động làm mới khi bạn reload</li>
+      </ul>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <title>Đăng ký - Google Index Checker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .register-card {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      padding: 40px;
+      max-width: 500px;
+      width: 100%;
+    }
+    .register-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .register-header h2 {
+      color: #667eea;
+      font-weight: 700;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      padding: 12px;
+      font-weight: 600;
+    }
+    .btn-primary:hover {
+      opacity: 0.9;
+    }
+    .alert {
+      border-radius: 10px;
+    }
+    .benefits-box {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .benefit-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .benefit-icon {
+      font-size: 1.5em;
+    }
+  </style>
+</head>
+<body>
+  <div class="register-card">
+    <div class="register-header">
+      <h2>🎉 Đăng ký tài khoản</h2>
+      <p class="text-muted">Google Index Checker</p>
+    </div>
+
+    <div class="benefits-box">
+      <h6 class="fw-bold mb-3">🎁 Ưu đãi khi đăng ký:</h6>
+      <div class="benefit-item">
+        <span class="benefit-icon">💰</span>
+        <small><strong>10 credits miễn phí</strong> để bắt đầu</small>
+      </div>
+      <div class="benefit-item">
+        <span class="benefit-icon">🚀</span>
+        <small><strong>Check index</strong> nhanh chóng</small>
+      </div>
+      <div class="benefit-item">
+        <span class="benefit-icon">📊</span>
+        <small><strong>Export Excel</strong> kết quả</small>
+      </div>
+      <div class="benefit-item">
+        <span class="benefit-icon">💬</span>
+        <small><strong>Hỗ trợ 24/7</strong> từ admin</small>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="/register" onsubmit="return validateForm()">
+      <div class="mb-3">
+        <label class="form-label fw-bold">📧 Email</label>
+        <input type="email" class="form-control" name="email" id="email" 
+               placeholder="your@email.com" required>
+        <div class="form-text">Sử dụng email thật để nhận thông báo</div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-bold">🔒 Mật khẩu</label>
+        <input type="password" class="form-control" name="password" id="password" 
+               placeholder="Ít nhất 6 ký tự" required>
+        <div class="form-text" id="passwordStrength"></div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-bold">🔒 Xác nhận mật khẩu</label>
+        <input type="password" class="form-control" name="confirm_password" id="confirm_password" 
+               placeholder="Nhập lại mật khẩu" required>
+      </div>
+
+      <div class="mb-3 form-check">
+        <input type="checkbox" class="form-check-input" id="agreeTerms" required>
+        <label class="form-check-label small" for="agreeTerms">
+          Tôi đồng ý với <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">Điều khoản sử dụng</a>
+        </label>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100 mb-3">
+        🚀 Đăng ký ngay
+      </button>
+
+      <div class="text-center">
+        <p class="mb-0">Đã có tài khoản? <a href="/login">Đăng nhập</a></p>
+      </div>
+    </form>
+  </div>
+
+  <!-- Terms Modal -->
+  <div class="modal fade" id="termsModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">📋 Điều khoản sử dụng</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <h6>1. Sử dụng Credits</h6>
+          <p class="small">Mỗi URL kiểm tra tốn 1 credit. Credits không hoàn lại.</p>
+
+          <h6>2. Trách nhiệm người dùng</h6>
+          <p class="small">Không spam, không sử dụng tool cho mục đích vi phạm pháp luật.</p>
+
+          <h6>3. Bảo mật</h6>
+          <p class="small">Không chia sẻ tài khoản. Admin không bao giờ hỏi mật khẩu.</p>
+
+          <h6>4. Hỗ trợ</h6>
+          <p class="small">Liên hệ admin qua hệ thống tin nhắn nội bộ.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Đồng ý</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Password strength indicator
+    document.getElementById('password').addEventListener('input', function(e) {
+      const password = e.target.value;
+      const strengthDiv = document.getElementById('passwordStrength');
+
+      if (password.length === 0) {
+        strengthDiv.textContent = '';
+        return;
+      }
+
+      let strength = 0;
+      if (password.length >= 6) strength++;
+      if (password.length >= 10) strength++;
+      if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+      if (/\d/.test(password)) strength++;
+      if (/[^a-zA-Z\d]/.test(password)) strength++;
+
+      const levels = ['Yếu', 'Trung bình', 'Khá', 'Mạnh', 'Rất mạnh'];
+      const colors = ['text-danger', 'text-warning', 'text-info', 'text-success', 'text-success'];
+
+      strengthDiv.textContent = '🔐 Độ mạnh: ' + levels[strength];
+      strengthDiv.className = 'form-text ' + colors[strength];
+    });
+
+    function validateForm() {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirm_password').value;
+
+      if (!email || !password || !confirmPassword) {
+        alert('⚠️ Vui lòng nhập đầy đủ thông tin!');
+        return false;
+      }
+
+      if (password.length < 6) {
+        alert('⚠️ Mật khẩu phải có ít nhất 6 ký tự!');
+        return false;
+      }
+
+      if (password !== confirmPassword) {
+        alert('⚠️ Mật khẩu xác nhận không khớp!');
+        return false;
+      }
+
+      return true;
+    }
+  </script>
+</body>
+</html>

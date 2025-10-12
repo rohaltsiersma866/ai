@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <title>Liên hệ Admin - Google Index Checker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <style>
+    body{padding:24px; background:#f8f9fa;}
+    .navbar {
+      background: white;
+      box-shadow: 0 2px 10px rgba(0,0,0,.1);
+      padding: 15px 0;
+      margin-bottom: 30px;
+    }
+    .contact-card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 6px 18px rgba(0,0,0,.08);
+      padding: 40px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="/">🔍 Index Checker</a>
+      <div class="d-flex gap-3">
+        <a href="/" class="btn btn-sm btn-outline-primary">🏠 Dashboard</a>
+        <a href="/my-credits" class="btn btn-sm btn-outline-primary">💳 Credits</a>
+        <a href="/my-messages" class="btn btn-sm btn-outline-success">📨 Tin nhắn</a>
+        <a href="/logout" class="btn btn-sm btn-outline-danger">Đăng xuất</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="contact-card">
+      <h2 class="mb-4">📧 Liên hệ Admin</h2>
+
+      <div class="alert alert-info mb-4">
+        <strong>💡 Hướng dẫn:</strong>
+        <ul class="mb-0 mt-2">
+          <li>Để nạp thêm credits, vui lòng gửi yêu cầu kèm số credits cần mua</li>
+          <li>Admin sẽ phản hồi trong vòng 24 giờ</li>
+          <li>Bạn có thể theo dõi trạng thái tin nhắn tại <a href="/my-messages">Tin nhắn của tôi</a></li>
+        </ul>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST" action="/contact">
+        <div class="mb-3">
+          <label class="form-label fw-bold">📝 Tiêu đề</label>
+          <select class="form-select" name="subject" required>
+            <option value="">-- Chọn chủ đề --</option>
+            <option value="Mua Credits">💰 Mua thêm Credits</option>
+            <option value="Hỗ trợ kỹ thuật">🔧 Hỗ trợ kỹ thuật</option>
+            <option value="Báo lỗi">🐛 Báo lỗi</option>
+            <option value="Góp ý">💡 Góp ý</option>
+            <option value="Khác">📋 Khác</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-bold">💬 Nội dung</label>
+          <textarea class="form-control" name="message" rows="8" required 
+                    placeholder="Ví dụ: Tôi muốn mua thêm 1000 credits. Vui lòng cho biết giá và hướng dẫn thanh toán."></textarea>
+        </div>
+
+        <div class="d-flex gap-3">
+          <button type="submit" class="btn btn-primary px-4">
+            📤 Gửi tin nhắn
+          </button>
+          <a href="/" class="btn btn-outline-secondary">
+            ← Quay lại
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

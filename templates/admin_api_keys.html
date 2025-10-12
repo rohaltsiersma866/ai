@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <title>Quản lý API Keys - Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <style>
+    body{padding:24px; background:#f8f9fa;}
+    .navbar {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      box-shadow: 0 2px 10px rgba(0,0,0,.1);
+      padding: 15px 0;
+      margin-bottom: 30px;
+      color: white;
+    }
+    .navbar-brand, .navbar a {
+      color: white !important;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+    .stat-box {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.1);
+      text-align: center;
+    }
+    .stat-number {
+      font-size: 2em;
+      font-weight: 700;
+      color: #667eea;
+    }
+    .api-key-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.08);
+      margin-bottom: 15px;
+      transition: all 0.3s;
+    }
+    .api-key-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0,0,0,.12);
+    }
+    .api-key-card.active {
+      border-left: 4px solid #10b981;
+    }
+    .api-key-card.low-credits {
+      border-left: 4px solid #f59e0b;
+    }
+    .api-key-card.exhausted {
+      border-left: 4px solid #ef4444;
+      opacity: 0.7;
+    }
+    .key-value {
+      font-family: 'Courier New', monospace;
+      background: #f3f4f6;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 0.9em;
+      word-break: break-all;
+    }
+    .add-key-box {
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      border-radius: 12px;
+      padding: 30px;
+      margin-bottom: 30px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="/admin">👑 Admin Dashboard</a>
+      <div class="d-flex gap-3">
+        <a href="/admin" class="btn btn-sm btn-light">← Dashboard</a>
+        <a href="/admin/users" class="btn btn-sm btn-outline-light">👥 Users</a>
+        <a href="/admin/messages" class="btn btn-sm btn-outline-light">📨 Messages</a>
+        <a href="/logout" class="btn btn-sm btn-outline-light">Đăng xuất</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h2>🔑 Quản lý API Keys</h2>
+        <p class="text-muted mb-0">Serper.dev API Keys Management</p>
+      </div>
+      <button class="btn btn-primary" onclick="refreshAllCredits()">
+        🔄 Refresh tất cả credits
+      </button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="text-muted mb-2">Tổng API Keys</div>
+        <div class="stat-number">{{ api_keys|length }}</div>
+      </div>
+      <div class="stat-box">
+        <div class="text-muted mb-2">Keys Active</div>
+        <div class="stat-number" style="color: #10b981;">
+          {{ api_keys | selectattr('status', 'in', ['active', 'low_credits']) | list | length }}
+        </div>
+      </div>
+      <div class="stat-box">
+        <div class="text-muted mb-2">Tổng Credits còn lại</div>
+        <div class="stat-number" style="color: #3b82f6;">
+          {% set total_credits = api_keys | map(attribute='remaining_credits') | sum %}
+          {{ total_credits }}
+        </div>
+      </div>
+      <div class="stat-box">
+        <div class="text-muted mb-2">Đã sử dụng</div>
+        <div class="stat-number" style="color: #f59e0b;">
+          {% set total_used = api_keys | map(attribute='total_used') | sum %}
+          {{ total_used }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Add New Key -->
+    <div class="add-key-box">
+      <h5 class="fw-bold mb-3">➕ Thêm API Key mới</h5>
+      <form method="POST" action="/admin/api-keys/add" onsubmit="return validateAddKey()">
+        <div class="row">
+          <div class="col-md-5">
+            <label class="form-label fw-bold">🔑 API Key:</label>
+            <input type="text" class="form-control" name="key_value" id="key_value" 
+                   placeholder="Nhập Serper API key" required>
+            <div class="form-text">Lấy từ <a href="https://serper.dev" target="_blank">serper.dev</a></div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold">📝 Tên gọi (tùy chọn):</label>
+            <input type="text" class="form-control" name="name" id="key_name" 
+                   placeholder="Ví dụ: Key Primary">
+          </div>
+          <div class="col-md-3 d-flex align-items-end">
+            <button type="submit" class="btn btn-success w-100">
+              ➕ Thêm Key
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- API Keys List -->
+    <h5 class="fw-bold mb-3">📋 Danh sách API Keys</h5>
+
+    {% if api_keys %}
+      {% for key in api_keys %}
+        <div class="api-key-card {{ key.status }}">
+          <div class="row align-items-center">
+            <div class="col-md-6">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <h6 class="mb-0 fw-bold">
+                  {{ key.name if key.name else 'Key #' + key.id|string }}
+                </h6>
+                {% if key.status == 'active' %}
+                  <span class="badge bg-success">✅ Active</span>
+                {% elif key.status == 'low_credits' %}
+                  <span class="badge bg-warning">⚠️ Low Credits</span>
+                {% elif key.status == 'exhausted' %}
+                  <span class="badge bg-danger">❌ Exhausted</span>
+                {% else %}
+                  <span class="badge bg-secondary">{{ key.status }}</span>
+                {% endif %}
+              </div>
+
+              <div class="key-value mb-2">
+                <small>{{ key.key_value }}</small>
+              </div>
+
+              <small class="text-muted">
+                🕐 Check cuối: {{ key.last_credit_check[:19] if key.last_credit_check else 'Chưa check' }}
+              </small>
+            </div>
+
+            <div class="col-md-3 text-center">
+              <div class="mb-1">
+                <strong style="font-size: 1.5em; color: {{ '#10b981' if key.remaining_credits > 100 else '#f59e0b' if key.remaining_credits > 0 else '#ef4444' }};">
+                  {{ key.remaining_credits }}
+                </strong>
+              </div>
+              <small class="text-muted">Credits còn lại</small>
+              <br>
+              <small class="text-muted">Đã dùng: {{ key.total_used }}</small>
+            </div>
+
+            <div class="col-md-3 text-end">
+              <button class="btn btn-sm btn-info mb-2" onclick="checkSingleKey({{ key.id }})">
+                🔄 Check Credits
+              </button>
+              <button class="btn btn-sm btn-danger" onclick="confirmDeleteKey({{ key.id }}, '{{ key.name if key.name else 'Key #' + key.id|string }}')">
+                🗑️ Xóa
+              </button>
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          {% set usage_percent = (key.total_used / (key.total_used + key.remaining_credits) * 100) if (key.total_used + key.remaining_credits) > 0 else 0 %}
+          <div class="progress mt-3" style="height: 8px;">
+            <div class="progress-bar {{ 'bg-success' if key.remaining_credits > 100 else 'bg-warning' if key.remaining_credits > 0 else 'bg-danger' }}" 
+                 style="width: {{ 100 - usage_percent }}%"></div>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="text-center py-5">
+        <div style="font-size: 4em; opacity: 0.3;">🔑</div>
+        <h5 class="text-muted mt-3">Chưa có API key nào</h5>
+        <p class="text-muted">Thêm API key đầu tiên từ form bên trên</p>
+      </div>
+    {% endif %}
+
+    <!-- Help -->
+    <div class="alert alert-info mt-4">
+      <strong>💡 Hướng dẫn sử dụng:</strong>
+      <ul class="mb-0 mt-2">
+        <li><strong>Lấy API Key:</strong> Đăng ký tại <a href="https://serper.dev" target="_blank">serper.dev</a> (Free plan: 2500 searches/month)</li>
+        <li><strong>Auto-rotation:</strong> Hệ thống tự động chuyển key khi hết quota</li>
+        <li><strong>Check credits:</strong> Click "🔄 Check Credits" để cập nhật số dư real-time</li>
+        <li><strong>Xóa key:</strong> Key sẽ bị vô hiệu hóa (soft delete), không mất dữ liệu</li>
+        <li><strong>Best practice:</strong> Nên có 2-3 backup keys để tránh gián đoạn</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="modal fade" id="deleteKeyModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">🗑️ Xác nhận xóa API Key</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>Bạn có chắc muốn xóa API Key này?</p>
+          <div class="alert alert-warning">
+            <strong>⚠️ Lưu ý:</strong>
+            <ul class="mb-0">
+              <li>Key sẽ bị vô hiệu hóa ngay lập tức</li>
+              <li>Các project đang chạy có thể bị ảnh hưởng</li>
+              <li>Lịch sử sử dụng vẫn được giữ lại</li>
+            </ul>
+          </div>
+          <p class="fw-bold" id="keyNameToDelete"></p>
+          <input type="hidden" id="keyIdToDelete">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="button" class="btn btn-danger" onclick="deleteKey()">
+            🗑️ Xác nhận xóa
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    let deleteKeyModal;
+
+    document.addEventListener('DOMContentLoaded', function() {
+      deleteKeyModal = new bootstrap.Modal(document.getElementById('deleteKeyModal'));
+    });
+
+    function validateAddKey() {
+      const keyValue = document.getElementById('key_value').value.trim();
+
+      if (!keyValue) {
+        alert('⚠️ Vui lòng nhập API key!');
+        return false;
+      }
+
+      if (keyValue.length < 20) {
+        alert('⚠️ API key không hợp lệ (quá ngắn)');
+        return false;
+      }
+
+      return true;
+    }
+
+    async function refreshAllCredits() {
+      if (!confirm('🔄 Refresh tất cả API credits?\n\nQuá trình này có thể mất vài giây...')) {
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/refresh-credits', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await res.json();
+
+        if (data.status === 'success') {
+          alert('✅ Đã cập nhật credits thành công!');
+          location.reload();
+        } else {
+          alert('❌ Lỗi: ' + data.message);
+        }
+      } catch (error) {
+        alert('❌ Lỗi: ' + error.message);
+      }
+    }
+
+    async function checkSingleKey(keyId) {
+      try {
+        event.target.disabled = true;
+        event.target.textContent = '⏳ Checking...';
+
+        const res = await fetch('/api/refresh-credits', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (res.ok) {
+          location.reload();
+        } else {
+          alert('❌ Lỗi khi check credits');
+          event.target.disabled = false;
+          event.target.textContent = '🔄 Check Credits';
+        }
+      } catch (error) {
+        alert('❌ Lỗi: ' + error.message);
+        event.target.disabled = false;
+        event.target.textContent = '🔄 Check Credits';
+      }
+    }
+
+    function confirmDeleteKey(keyId, keyName) {
+      document.getElementById('keyIdToDelete').value = keyId;
+      document.getElementById('keyNameToDelete').textContent = keyName;
+      deleteKeyModal.show();
+    }
+
+    async function deleteKey() {
+      const keyId = document.getElementById('keyIdToDelete').value;
+
+      try {
+        const res = await fetch(`/admin/api-keys/${keyId}/delete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await res.json();
+
+        if (data.status === 'success') {
+          alert('✅ Đã xóa API key thành công!');
+          deleteKeyModal.hide();
+          location.reload();
+        } else {
+          alert('❌ Lỗi: ' + data.message);
+        }
+      } catch (error) {
+        alert('❌ Lỗi: ' + error.message);
+      }
+    }
+
+    // Auto refresh every 60 seconds
+    setInterval(() => {
+      const lastRefresh = localStorage.getItem('lastApiRefresh');
+      const now = Date.now();
+
+      if (!lastRefresh || (now - parseInt(lastRefresh)) > 60000) {
+        localStorage.setItem('lastApiRefresh', now.toString());
+        location.reload();
+      }
+    }, 60000);
+  </script>
+</body>
+</html>

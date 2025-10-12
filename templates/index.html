@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <title>Google Index Checker - User Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <style>
+    body{padding:24px; background:#f8f9fa;}
+    .tab-card{border-radius:16px; box-shadow:0 6px 18px rgba(0,0,0,.08); background:white;}
+    textarea{min-height:220px;}
+    .status-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px;}
+    .dot-running{background:#f59e0b; animation: pulse 2s infinite;}
+    .dot-done{background:#10b981;}
+    .dot-error{background:#ef4444;}
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+    .progress-small {
+      height: 6px;
+      margin-top: 4px;
+    }
+    .credit-status {
+      font-size: 1.1em;
+      padding: 20px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      margin-bottom: 20px;
+    }
+    .credit-number {
+      font-size: 2em;
+      font-weight: 700;
+    }
+    .stats-card {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.1);
+      margin-bottom: 15px;
+    }
+    .navbar {
+      background: white;
+      box-shadow: 0 2px 10px rgba(0,0,0,.1);
+      padding: 15px 0;
+      margin-bottom: 30px;
+    }
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="/">🔍 Index Checker</a>
+      <div class="user-info">
+        <span class="text-muted">{{ user.email }}</span>
+        <a href="/my-credits" class="btn btn-sm btn-outline-primary">💳 Credits</a>
+        <a href="/contact" class="btn btn-sm btn-outline-success">📧 Liên hệ</a>
+        <a href="/logout" class="btn btn-sm btn-outline-danger">Đăng xuất</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="row">
+      <div class="col-12">
+        <h2 class="mb-4">🔎 Google Index Checker</h2>
+
+        <!-- User Credit Status -->
+        <div class="credit-status">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="mb-2">💰 Credits của bạn:</div>
+              <div class="credit-number">{{ user.credits }}</div>
+            </div>
+            <div class="text-end">
+              <a href="/contact" class="btn btn-light">
+                ➕ Mua thêm credits
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+      </div>
+    </div>
+
+    <ul class="nav nav-tabs" id="tabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="submit-tab" data-bs-toggle="tab" data-bs-target="#submit-pane" type="button" role="tab">1️⃣ Gửi link</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="results-tab" data-bs-toggle="tab" data-bs-target="#results-pane" type="button" role="tab">2️⃣ Kết quả</button>
+      </li>
+    </ul>
+
+    <div class="tab-content p-4 tab-card">
+      <!-- TAB 1: SUBMIT -->
+      <div class="tab-pane fade show active" id="submit-pane" role="tabpanel" aria-labelledby="submit-tab">
+        <form method="POST" action="/submit" onsubmit="return validateForm();">
+          <div class="mb-3">
+            <label class="form-label fw-bold">📁 Tên dự án</label>
+            <input type="text" class="form-control" name="projectName" id="projectName" 
+                   placeholder="Ví dụ: check_index_website_2025" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold">📋 Danh sách URL</label>
+            <textarea class="form-control font-monospace" name="urlList" id="urlList" 
+                      placeholder="https://example.com/page-1
+https://example.com/page-2  
+https://example.com/page-3
+(mỗi dòng một URL)" required></textarea>
+            <div class="form-text">
+              💡 <strong>Chi phí:</strong> 1 credit = 1 URL
+              <br>
+              📊 <strong>Credits hiện có:</strong> <span id="currentCredits">{{ user.credits }}</span> credits
+            </div>
+          </div>
+          <div class="d-flex align-items-center gap-3">
+            <button class="btn btn-primary btn-lg px-4" type="submit">
+              🚀 Bắt đầu kiểm tra
+            </button>
+            <span class="text-muted">Job chạy background, chuyển tab "Kết quả" để theo dõi tiến độ</span>
+          </div>
+        </form>
+      </div>
+
+      <!-- TAB 2: RESULTS -->
+      <div class="tab-pane fade" id="results-pane" role="tabpanel" aria-labelledby="results-tab">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="m-0">📊 Danh sách dự án của bạn</h5>
+          <button class="btn btn-outline-primary btn-sm" onclick="loadProjects()">
+            🔄 Làm mới
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th width="50">ID</th>
+                <th>Tên dự án</th>
+                <th width="120">Trạng thái</th>
+                <th width="150">Tiến độ</th>
+                <th width="120">Tỉ lệ Index</th>
+                <th width="80">Errors</th>
+                <th width="120">Thời gian</th>
+                <th width="140">Action</th>
+              </tr>
+            </thead>
+            <tbody id="projectsBody">
+              <tr><td colspan="8" class="text-muted text-center py-4">🔄 Chưa có dự án nào...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats & Info -->
+    <div class="row mt-4">
+      <div class="col-md-6">
+        <div class="stats-card">
+          <h6 class="fw-bold mb-2">⚡ Tối ưu hóa tốc độ:</h6>
+          <ul class="small mb-0">
+            <li>Xử lý song song 5 URLs cùng lúc</li>
+            <li>Batch size 30 URLs (nhanh hơn 40%)</li>
+            <li>Timeout giảm từ 15s → 10s</li>
+            <li>Excel format: URL | Index Status (gọn gàng)</li>
+            <li>Summary thống kê: Tỉ lệ Index, Success rate</li>
+          </ul>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="stats-card">
+          <h6 class="fw-bold mb-2">💳 Hệ thống Credits:</h6>
+          <ul class="small mb-0">
+            <li>💰 1 URL = 1 credit</li>
+            <li>🎁 10 credits miễn phí khi đăng ký</li>
+            <li>📧 Liên hệ admin để nạp thêm credits</li>
+            <li>📊 Theo dõi lịch sử sử dụng</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const userCredits = {{ user.credits }};
+
+    function validateForm(){
+      const name = document.getElementById('projectName').value.trim();
+      const urls = document.getElementById('urlList').value.trim();
+
+      if(!name || !urls){ 
+        alert('❌ Vui lòng nhập đầy đủ tên dự án và danh sách URL!'); 
+        return false; 
+      }
+
+      const urlList = urls.split('\n').filter(u => u.trim());
+      if(urlList.length === 0) {
+        alert('❌ Danh sách URL trống!');
+        return false;
+      }
+
+      // Validate URLs
+      const invalidUrls = urlList.filter(url => {
+        try {
+          new URL(url.trim());
+          return false;
+        } catch {
+          return true;
+        }
+      });
+
+      if(invalidUrls.length > 0) {
+        alert(`❌ URL không hợp lệ:\n${invalidUrls.slice(0, 3).join('\n')}`);
+        return false;
+      }
+
+      // Check credits
+      if(urlList.length > userCredits) {
+        alert(`❌ Không đủ credits!\nCần: ${urlList.length} credits\nCó: ${userCredits} credits\n\nVui lòng liên hệ admin để nạp thêm credits.`);
+        return false;
+      }
+
+      const confirmed = confirm(
+        `🔍 Sẽ kiểm tra ${urlList.length} URLs\n` +
+        `💰 Chi phí: ${urlList.length} credits\n` +
+        `📊 Credits còn lại: ${userCredits - urlList.length} credits\n\n` +
+        `Tiếp tục?`
+      );
+
+      return confirmed;
+    }
+
+    async function loadProjects(){
+      try {
+        const res = await fetch('/projects');
+        const data = await res.json();
+        const tbody = document.getElementById('projectsBody');
+
+        if(!Array.isArray(data) || data.length === 0){
+          tbody.innerHTML = '<tr><td colspan="8" class="text-muted text-center py-4">🔄 Chưa có dự án nào...</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.map(p => {
+          let dot, statusText, progressHtml, actionBtn;
+
+          if(p.status === 'done'){
+            dot = '<span class="status-dot dot-done"></span>';
+            statusText = '✅ Hoàn thành';
+
+            const [completed, total] = (p.progress || '0/0').split('/').map(x => parseInt(x) || 0);
+            const stats = p.final_stats || {};
+
+            progressHtml = `
+              <div class="small"><strong>${completed}/${total}</strong></div>
+              ${stats.index_rate !== undefined ? `<div class="small text-info">Index: ${stats.index_rate}%</div>` : ''}
+            `;
+
+            actionBtn = `<a class="btn btn-success btn-sm" href="/download/${p.id}" title="Tải Excel">
+              📊 Download
+            </a>`;
+
+          } else if(p.status === 'retrying_errors'){
+            dot = '<span class="status-dot dot-running"></span>';
+            statusText = '🔄 Retry lỗi';
+
+            const [completed, total] = (p.progress || '0/0').split('/').map(x => parseInt(x) || 0);
+            const [retryDone, retryTotal] = (p.retry_progress || '0/0').split('/').map(x => parseInt(x) || 0);
+            const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+            progressHtml = `
+              <div class="small mb-1">Round 1: ${completed}/${total} (${percent}%)</div>
+              <div class="small mb-1 text-warning">🔄 Retry: ${retryDone}/${retryTotal}</div>
+              <div class="progress progress-small">
+                <div class="progress-bar bg-warning progress-bar-animated" style="width: ${percent}%"></div>
+              </div>
+            `;
+            actionBtn = '<button class="btn btn-warning btn-sm" disabled>🔄 Retry...</button>';
+
+          } else if(p.status === 'running'){
+            dot = '<span class="status-dot dot-running"></span>';
+            statusText = '⚡ Đang chạy';
+
+            const [completed, total] = (p.progress || '0/0').split('/').map(x => parseInt(x) || 0);
+            const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+            progressHtml = `
+              <div class="small mb-1">${completed}/${total} (${percent}%)</div>
+              <div class="progress progress-small">
+                <div class="progress-bar bg-primary progress-bar-animated progress-bar-striped" 
+                     style="width: ${percent}%"></div>
+              </div>
+            `;
+            actionBtn = '<button class="btn btn-secondary btn-sm" disabled>⏳ Đang xử lý...</button>';
+
+          } else {
+            dot = '<span class="status-dot dot-error"></span>';
+            statusText = '❌ Lỗi';
+            progressHtml = '<span class="text-danger small">Lỗi</span>';
+            actionBtn = '<button class="btn btn-outline-danger btn-sm" disabled>Failed</button>';
+          }
+
+          const indexedCount = p.indexed_count || 0;
+          const totalUrls = p.total_urls || 0;
+          const indexRate = totalUrls > 0 ? ((indexedCount / totalUrls) * 100) : 0;
+
+          let indexHtml;
+          if(p.status === 'done') {
+            indexHtml = `
+              <div><strong class="text-primary">${indexRate.toFixed(2)}%</strong></div>
+              <small class="text-muted">(${indexedCount}/${totalUrls})</small>
+            `;
+          } else if(totalUrls > 0) {
+            const currentRate = indexedCount > 0 ? ((indexedCount / totalUrls) * 100) : 0;
+            indexHtml = `
+              <div><span class="text-success">${currentRate.toFixed(1)}%</span></div>
+              <small class="text-muted">(${indexedCount}/${totalUrls})</small>
+            `;
+          } else {
+            indexHtml = '<span class="text-muted">-</span>';
+          }
+
+          const errorCount = p.error_count || 0;
+          const errorHtml = errorCount > 0 ? 
+            `<span class="badge bg-danger">${errorCount}</span>` :
+            '<span class="badge bg-success">0</span>';
+
+          const createdTime = p.created_at ? 
+            new Date(p.created_at).toLocaleString('vi-VN', {
+              day: '2-digit',
+              month: '2-digit', 
+              hour: '2-digit',
+              minute: '2-digit'
+            }) : '';
+
+          return `<tr>
+            <td><span class="badge bg-primary">${p.id}</span></td>
+            <td>
+              <div class="fw-bold">${p.name}</div>
+              <small class="text-muted">${totalUrls} URLs</small>
+            </td>
+            <td>${dot}<small>${statusText}</small></td>
+            <td>${progressHtml}</td>
+            <td>${indexHtml}</td>
+            <td>${errorHtml}</td>
+            <td><small class="text-muted">${createdTime}</small></td>
+            <td>${actionBtn}</td>
+          </tr>`;
+        }).join('');
+
+      } catch(error) {
+        console.error('Error loading projects:', error);
+        document.getElementById('projectsBody').innerHTML = 
+          '<tr><td colspan="8" class="text-danger text-center py-4">❌ Lỗi tải dữ liệu</td></tr>';
+      }
+    }
+
+    // Event listeners
+    document.getElementById('results-tab').addEventListener('shown.bs.tab', () => {
+      loadProjects();
+    });
+
+    // Auto refresh every 3 seconds when on results tab
+    setInterval(() => {
+      const resultsPane = document.getElementById('results-pane');
+      if(resultsPane && resultsPane.classList.contains('active')) {
+        loadProjects();
+      }
+    }, 3000);
+  </script>
+</body>
+</html>
